@@ -56,7 +56,7 @@ private:
     }
 
     int getSymbolIndex(const string &symbol) {
-        int index = 0;
+        int index = 1;
         for (const auto &kv : symbolTable) {
             if (kv.first == symbol) return index;
             index++;

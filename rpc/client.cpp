@@ -12,7 +12,7 @@ int main() {
     inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
 
     connect(sock, (sockaddr*)&addr, sizeof(addr));
-    cout << "✅ Connected to RPC Server.\n";
+    cout << "Connected to RPC Server.\n";
 
     char func;
     int a, b;
@@ -27,7 +27,7 @@ int main() {
 
     int res;
     read(sock, &res, sizeof(res));
-    cout << "🧮 Result from server: " << res << endl;
+    cout << "Result from server: " << res << endl;
 
     close(sock);
     return 0;

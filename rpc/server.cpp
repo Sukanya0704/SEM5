@@ -36,15 +36,14 @@ int main() {
     bind(serverFd, (sockaddr*)&addr, sizeof(addr));
     listen(serverFd, 5);
 
-    cout << "🛰️ RPC Server running on port 6000...\n";
+    cout << "RPC Server running on port 6000...\n";
 
     while (true) {
         int clientSocket = accept(serverFd, NULL, NULL);
-        cout << "💡 New RPC client connected.\n";
+        cout << " RPC client connected.\n";
         thread(handleClient, clientSocket).detach();
     }
 
     close(serverFd);
     return 0;
 }
- server.cpp

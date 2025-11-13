@@ -1,87 +1,141 @@
-#include<bits/stdc++.h>
+#include <iostream>
+#include <sstream>
+#include <unordered_map>
+#include <string>
+#include <algorithm>
+#include <fstream>
+#include <vector>
 using namespace std;
 
-vector<vector<string>> SRC, MNT, MDT, KPDT;
-vector<string> APT, OUT;
-
-vector<string> split(const string& s, char d = ' ') {
-    vector<string> v; string x; stringstream ss(s);
-    while (getline(ss, x, d)) 
-    if (!x.empty()) v.push_back(x);
+vector<string> split(string line)
+{
+    string word;
+    vector<string> v;
+    stringstream ss(line);
+    while (ss >> word)
+    {
+        v.push_back(word);
+    }
     return v;
 }
 
-void read_file(const string& f, vector<vector<string>>& t) {
-    ifstream fin(f);
-    if (!fin) { cerr << "Can't open " << f << endl; exit(1); }
-    string line; 
-    while (getline(fin, line)) if (!line.empty()) t.push_back(split(line));
-}
-
-pair<bool, vector<string>> is_macro(const vector<string>& line) {
-    if (line.empty()) return {false, {}};
-    int pp = 0, kp = 0;
-    for (size_t i = 1; i < line.size(); ++i)
-        (line[i].find('=') != string::npos) ? kp++ : pp++;
-    for (auto& e : MNT)
-        if (line[0] == e[0] && pp == stoi(e[1]) && kp <= stoi(e[2])) return {true, e};
-    return {false, {}};
-}
-
-vector<string> get_args(const vector<string>& line, const vector<string>& m) {
-    vector<string> args;
-    int kp = stoi(m[2]), kpdt_i = stoi(m[4]) - 1;
-    vector<pair<string, string>> kps;
-    for (int i = 0; i < kp; i++) kps.push_back({KPDT[kpdt_i+i][0], KPDT[kpdt_i+i][1]});
-    for (size_t i = 1; i < line.size(); i++)
-        if (line[i].find('=') == string::npos) args.push_back(line[i]);
-        else {
-            auto p = line[i].find('=');
-            for (auto& k : kps)
-                if (k.first == line[i].substr(0, p))
-                    k.second = line[i].substr(p+1);
-        }
-    for (auto& k : kps)
-        if (k.second != "_") args.push_back(k.second);
-        else throw runtime_error("Missing arg for " + k.first);
-    return args;
-}
-
-void expand(int mdt_i) {
-    for (int i = mdt_i; i < (int)MDT.size(); i++) {
-        if (find(MDT[i].begin(), MDT[i].end(), "MEND") != MDT[i].end()) break;
-        string out;
-        for (auto& t : MDT[i]) {
-            if (t.find("(P,") != string::npos) {
-                int idx = stoi(t.substr(t.find(',')+1)) - 1;
-                out += (idx < (int)APT.size()) ? APT[idx] + " " : t + " ";
-            } else out += t + " ";
-        }
-        OUT.push_back(out);
+class MNTEntry
+{
+public:
+    string name;
+    int pp;
+    int kp;
+    int mdtp;
+    int kpdtp;
+    MNTEntry(string n = "", int p = 0, int k = 0, int m = 0, int kpdtp_val = 0)
+    {
+        name = n;
+        pp = p;
+        kp = k;
+        mdtp = m;
+        kpdtp = kpdtp_val;
     }
-}
+    int getpp() { return pp; }
+    int getkp() { return kp; }
+    int getmdtp() { return mdtp; }
+    int getkpdtp() { return kpdtp; }
+};
 
-int main() {
-    string path; 
-    cout << "Enter Testcase folder: ";
-    getline(cin, path);
+int main()
+{
 
-    read_file(path + "/src.txt", SRC);
-    read_file(path + "/MNT.txt", MNT);
-    read_file(path + "/MDT.txt", MDT);
-    read_file(path + "/KPDT.txt", KPDT);
-
-    for (auto& line : SRC) {
-        auto [ok, m] = is_macro(line);
-        if (ok) { 
-            try { APT = get_args(line, m); }
-            catch (exception& e) { cerr << e.what() << endl; return 1; }
-            expand(stoi(m[3]) - 1);
-        } else {
-            string out; for (auto& t : line) out += t + " ";
-            OUT.push_back(out);
-        }
+    ifstream fin("intermediate.txt"), mdtb("mdt.txt"), mntb("mnt.txt"), kpdtb("kpdt.txt");
+    ofstream fout("output.txt");
+    if (!fin.is_open() || !mdtb.is_open() || !mntb.is_open() || !kpdtb.is_open() || !fout.is_open())
+    {
+        cout << "Error in opening files " << endl;
+        return 1;
+    }
+    unordered_map<string, MNTEntry> mnt;
+    unordered_map<int, string> aptab;
+    unordered_map<string, int> aptabinverse;
+    vector<string> mdt, kpdt;
+    string line;
+    while (getline(mdtb, line))
+        mdt.push_back(line);
+    while (getline(kpdtb, line))
+        kpdt.push_back(line);
+    while (getline(mntb, line))
+    {
+        stringstream ss(line);
+        string name;
+        int pp;
+        int kp;
+        int mdtp;
+        int kpdtp;
+        ss >> name >> pp >> kp >> mdtp >> kpdtp;
+        mnt[name] = MNTEntry(name, pp, kp, mdtp, kpdtp);
     }
 
-    for (auto& l : OUT) cout << l << endl;
+    while (getline(fin, line))
+    {
+        vector<string> parts = split(line);
+        if (mnt.count(parts[0]))
+        {
+            MNTEntry &entry = mnt[parts[0]];
+            int pp = entry.getpp();
+            int kp = entry.getkp();
+            int mdtp = entry.getmdtp();
+            int kpdtp = entry.getkpdtp();
+            int paramno = 1;
+            for (int i = 1; i <= pp && i < parts.size(); i++)
+            {
+                aptab[paramno] = parts[i];
+                aptabinverse[parts[i]] = paramno++;
+            }
+            for (int i = kpdtp - 1; i < kpdtp - 1 + kp && i < kpdt.size(); i++)
+            {
+                stringstream ss(kpdt[i]);
+                string paramname, defaultvalue;
+                ss >> paramname >> defaultvalue;
+                aptab[paramno] = defaultvalue;
+                aptabinverse[paramname] = paramno++;
+                cout << "Adding to aptab: " << paramno << " -> " << defaultvalue << endl;
+                cout << "Adding to aptabinverse: " << paramname << " -> " << paramno << endl;
+            }
+            for (int i = pp + 1; i < parts.size(); i++)
+            {
+                // int pos=parts[i].find("=");
+                if (parts[i].find("=") != string::npos)
+                {
+                    int pos = parts[i].find("=");
+                    string keyword = parts[i].substr(0, pos);
+                    string value = parts[i].substr(pos + 1);
+                    if (aptabinverse.count(keyword))
+                        aptab[aptabinverse[keyword]] = value;
+                }
+            }
+
+            for (int i = mdtp - 1; i < mdt.size() && mdt[i] != "MEND"; i++)
+            {
+                stringstream ss(mdt[i]);
+                string token;
+                fout << "+";
+                while (ss >> token)
+                {
+                    if (token.find("(p,") != string::npos)
+                    {
+                        int num = stoi(token.substr(3, token.find(')') - 3));
+                        fout << aptab[num] << " ";
+                    }
+                    else
+                    {
+                        fout << token << " ";
+                    }
+                }
+                fout << "\n";
+            }
+            aptab.clear();
+            aptabinverse.clear();
+        }
+    }
+
+    cout << "Pass 2 of two pass Macroprocessor done successfully! " << endl;
+
+    return 0;
 }
